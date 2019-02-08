@@ -34,8 +34,11 @@ port(
 			VideoW_O		: out std_logic;  -- White video output (680 Ohm)
 			VideoB_O		: out std_logic;	-- Black video output (1.2k)
 			Sync_O		: out std_logic;  -- Composite sync output (1.2k)
-			Audio1_O		: out std_logic;  -- Ideally this should have a simple low pass filter
-			Audio2_O		: out std_logic;
+			Audio1_O			: out std_logic_vector(6 downto 0);
+			Audio2_O			: out std_logic_vector(6 downto 0);
+
+			--Audio1_O		: out std_logic;  -- Ideally this should have a simple low pass filter
+			--Audio2_O		: out std_logic;
 			Coin1_I		: in  std_logic;  -- Coin switches (Active low)
 			Coin2_I		: in  std_logic;
 			Start1_I		: in  std_logic;  -- Start buttons
@@ -55,13 +58,32 @@ port(
 			Steer_2A_I	: in	std_logic;
 			Steer_2B_I	: in 	std_logic;
 			Lamp1_O		: out std_logic;	-- Player 1 and 2 start button LEDs
-			Lamp2_O		: out std_logic
+			Lamp2_O		: out std_logic;
+			
+			SW1_I			: in std_logic_vector(7 downto 0);
+			
+			
+			hs_O			: out std_logic;
+			vs_O			: out std_logic;
+			hblank_O		: out std_logic;
+			vblank_O		: out std_logic;
+
+			clk_12		: in std_logic;
+			clk_6_O		: out std_logic;
+
+			-- signals that carry the ROM data from the MiSTer disk
+			dn_addr        : in  std_logic_vector(15 downto 0);
+			dn_data        : in  std_logic_vector(7 downto 0);
+			dn_wr          : in  std_logic
+			
+			
+
 			);
 end sprint2;
 
 architecture rtl of sprint2 is
 
-signal clk_12			: std_logic;
+--signal clk_12			: std_logic;
 signal clk_6			: std_logic;
 signal phi1 			: std_logic;
 signal phi2				: std_logic;
@@ -148,12 +170,23 @@ signal NMI_n			: std_logic;
 
 signal Adr				: std_logic_vector(9 downto 0);
 
-signal SW1				: std_logic_vector(7 downto 0);
+--signal SW1				: std_logic_vector(7 downto 0);
 
 signal Inputs			: std_logic_vector(1 downto 0);
 signal Collisions1	: std_logic_vector(1 downto 0);
 signal Collisions2	: std_logic_vector(1 downto 0);
 
+-- logic to load roms from disk
+signal rom1_cs   			: std_logic;
+signal rom2_cs   			: std_logic;
+signal rom3_cs   			: std_logic;
+signal rom4_cs   			: std_logic;
+--signal rom_LSB_cs   		: std_logic;
+--signal rom_MSB_cs   		: std_logic;
+--signal rom_car_k6_cs   	: std_logic;
+--signal rom_car_j6_cs   	: std_logic;
+--signal rom_sync_prom_cs : std_logic;
+signal rom_32_cs   		: std_logic;
 
 begin
 -- Configuration DIP switches, these can be brought out to external switches if desired
@@ -164,14 +197,37 @@ begin
 --						5				Extended Play		(0 - Extended Play enabled)
 --							6			Not used				(X - Don't care)
 --								7	8	Game time			(01 - 120 Seconds)
-SW1 <= "01000101"; -- Config dip switches
+--SW1 <= "01000101"; -- Config dip switches
+--                          13
+-- 
+--     2048     6290-01.b1  00 0000 0000 0000   prog_rom1	8 bit wide
+--     2048     6291-01.c1  00 1000 0000 0000   prog_rom2	8 bit wide
+--     2048     6442-01.d1  01 0000 0000 0000   prog_rom3	8 bit wide
+--     2048     6443-01.e1  01 1000 0000 0000   prog_rom4	8 bit wide
+--      512     6396-01.p4  10 0000 0000 0000  - LSB	4 bit wide
+--      512     6397-01.r4  10 0010 0000 0000  - MSB	4 bit wide
+--      512     6398-01.k6  10 0100 0000 0000  - cars k6	4 bit wide
+--      512     6399-01.j6  10 0110 0000 0000  - cars j6	4 bit wide
+--      256     6400-01.m2  10 1000 0000 0000  - sync_prom	4 bit wide
+--       32     6401-01.e2  10 1001 0000 0000					8 bit wide
+
+rom1_cs <= '1' when dn_addr(13 downto 11) = "000"     else '0';
+rom2_cs <= '1' when dn_addr(13 downto 11) = "001"     else '0';
+rom3_cs <= '1' when dn_addr(13 downto 11) = "010"     else '0';
+rom4_cs <= '1' when dn_addr(13 downto 11) = "011"     else '0';
+--rom_LSB_cs <= '1' when dn_addr(13 downto 9) =  "10000"   else '0';
+--rom_MSB_cs <= '1' when dn_addr(13 downto 9) =  "10001"   else '0';
+--rom_car_k6_cs <= '1' when dn_addr(13 downto 9) =  "10010"   else '0';
+--rom_car_j6_cs <= '1' when dn_addr(13 downto 9) =  "10011"   else '0';
+--rom_sync_prom_cs <= '1' when dn_addr(13 downto 8) =  "101000"   else '0';
+rom_32_cs <= '1' when dn_addr(13 downto 8) =  "101001"   else '0';
 
 -- PLL to generate 12.096 MHz clock
-PLL: entity work.clk_pll
-port map(
-		inclk0 => Clk_50_I,
-		c0 => clk_12
-		);
+--PLL: entity work.clk_pll
+--port map(
+--		inclk0 => Clk_50_I,
+--		c0 => clk_12
+--		);
 		
 		
 Vid_sync: entity work.synchronizer
@@ -273,14 +329,25 @@ port map(
 		IO_Adr => Adr,
 		Collisions1 => Collisions1,
 		Collisions2 => Collisions2,
-		Inputs => Inputs
+		Inputs => Inputs,
+		
+		dn_wr => dn_wr,
+		dn_addr=>dn_addr,
+		dn_data=>dn_data,
+		
+		rom1_cs=>rom1_cs,
+		rom2_cs=>rom2_cs,
+		rom3_cs=>rom3_cs,
+		rom4_cs=>rom4_cs,
+		rom_32_cs=>rom_32_cs
+
 		);
 
 
 Input: entity work.Control_Inputs
 port map(
 		clk6 => clk_6,
-		SW1 => SW1, -- DIP switches
+		SW1 => SW1_I, -- DIP switches
 		Coin1_n => Coin1_I,
 		Coin2_n => Coin2_I,
 		Start1 => not Start1_I, -- Active high in real hardware, inverting these makes more sense with the FPGA
@@ -329,5 +396,10 @@ port map(
 VideoB_O <= (not(BlackPF_n and Car2_n and Car3_4_n)) nor CompBlank_s;	
 VideoW_O <= not(WhitePF_n and Car1_n and Car3_4_n);  
 Sync_O <= CompSync_n_s;
+hs_O<= hsync;
+hblank_O <= HBlank;
+vblank_O <= VBlank;
+vs_O <=vsync;
+clk_6_O<=clk_6;
 
 end rtl;

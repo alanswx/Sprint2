@@ -34,8 +34,8 @@ port(
 			Display			: in	std_logic_vector(7 downto 0);
 			HCount			: in  std_logic_vector(8 downto 0);
 			VCount			: in  std_logic_vector(7 downto 0);
-			Audio1			: out std_logic;
-			Audio2	   	: out std_logic);
+			Audio1			: out std_logic_vector(6 downto 0);
+			Audio2	   	: out std_logic_vector(6 downto 0));
 end audio;
 
 architecture rtl of audio is
@@ -233,33 +233,38 @@ port map(
 	
 	
 -- Audio mixer, also mutes sound in attract mode
-P1_Audio <= ('0' & motor1_snd) + ("00" & screech1) + ('0' & bang_filtered) when attract = '0'
+audio1 <= ('0' & motor1_snd) + ("00" & screech1) + ('0' & bang_filtered) when attract = '0'
 				else "0000000";
 				
-P2_Audio <= ('0' & motor2_snd) + ("00" & screech2) + ('0' & bang_filtered) when attract = '0'
+audio2 <= ('0' & motor2_snd) + ("00" & screech2) + ('0' & bang_filtered) when attract = '0'
 				else "0000000";	
+--P1_Audio <= ('0' & motor1_snd) + ("00" & screech1) + ('0' & bang_filtered) when attract = '0'
+--				else "0000000";
+				
+--P2_Audio <= ('0' & motor2_snd) + ("00" & screech2) + ('0' & bang_filtered) when attract = '0'
+--				else "0000000";	
 		
 
-DAC1: entity work.deltasigma
-generic map(
-width => 7
-)
-port map(
-	inval => P1_audio,
-	output => audio1,
-	clk => clk_50,
-	reset => reset
-	);
+--DAC1: entity work.deltasigma
+--generic map(
+--width => 7
+--)
+--port map(
+--	inval => P1_audio,
+--	output => audio1,
+--	clk => clk_50,
+--	reset => reset
+--	);
 	
-DAC2: entity work.deltasigma
-generic map(
-width => 7
-)
-port map(
-	inval => P2_audio,
-	output => audio2,
-	clk => clk_50,
-	reset => reset
-	);
+--DAC2: entity work.deltasigma
+--generic map(
+--width => 7
+--)
+--port map(
+--	inval => P2_audio,
+--	output => audio2,
+--	clk => clk_50,
+--	reset => reset
+--	);
 
 end rtl;

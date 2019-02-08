@@ -99,18 +99,18 @@ end process;
 
 -- Many Atari raster games use a 256 x 4 bit prom to decode vertical sync signals
 -- This could be replaced by combinatorial logic
---M2: entity work.sync_prom
---port map(
---		clock => clk_12, 
---		address => sync_reg(3) & V128 & V64 & V16 & V8 & V4 & V2 & V1,
---		q => sync_bus
---		);
-
-M2: entity work.prom
+M2: entity work.sync_prom
 port map(
+		clock => clk_12, 
 		address => sync_reg(3) & V128 & V64 & V16 & V8 & V4 & V2 & V1,
-		data => sync_bus
+		q => sync_bus
 		);
+
+--M2: entity work.prom
+--port map(
+--		address => sync_reg(3) & V128 & V64 & V16 & V8 & V4 & V2 & V1,
+--		data => sync_bus
+--		);
 
 -- Register fed by the sync PROM, in the original hardware this also creates the complements of these signals
 sync_register: process(hsync_int)
