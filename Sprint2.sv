@@ -121,12 +121,13 @@ localparam CONF_STR = {
 	"A.SPRINT2;;",
 	"-;",
 	"O1,Oil Slicks,On,Off;",
-	"O2,Cycle tracks,every lap,every two laps;",
+	"O2,Cycle tracks on demo,On,Off;",
 	"O3,Extended Play,extended,normal;",
 	"O45,Game time,150 Sec,120 Sec,90 Sec,60 Sec;",
+	"O7,Test,Off,On;",
 	"-;",
 	"T6,Reset;",
-	"J,Gas,GearUp,GearDown,Start 1P,Start 2P;",
+	"J,Gas,GearUp,GearDown,Next Track,Start 1P,Start 2P;",
 	"V,v",`BUILD_DATE
 };
 
@@ -202,20 +203,21 @@ reg btn_gas  = 0;
 reg btn_one_player  = 0;
 reg btn_two_players = 0;
 
-wire m_left   =  btn_left  | joy0[1];
-wire m_right  =  btn_right | joy0[0];
-wire m_gas = btn_gas| joy0[4];
-wire m_gearup   =  joy0[5];
-wire m_geardown   =  joy0[6];
+wire m_left			=  btn_left  | joy0[1];
+wire m_right		=  btn_right | joy0[0];
+wire m_gas			= btn_gas| joy0[4];
+wire m_gearup		=  joy0[5];
+wire m_geardown	=  joy0[6];
 
-wire m_left1   =   joy1[1];
-wire m_right1  =  joy1[0];
-wire m_gas1 =  joy1[4];
-wire m_gearup1   =  joy1[5];
-wire m_geardown1   =  joy1[6];
+wire m_left1   	=	joy1[1];
+wire m_right1  	=  joy1[0];
+wire m_gas1 		=  joy1[4];
+wire m_gearup1		=  joy1[5];
+wire m_geardown1	=  joy1[6];
+wire m_next_track	=  joy0[7]|joy1[7];
 
-wire m_start1 = btn_one_player  | joy0[7] | joy1[7];
-wire m_start2 = btn_two_players | joy0[8] | joy1[8];
+wire m_start1 = btn_one_player  | joy0[8] | joy1[8];
+wire m_start2 = btn_two_players | joy0[9] | joy1[9];
 wire m_coin   = m_start1 | m_start2;
 
 
@@ -224,7 +226,7 @@ wire m_coin   = m_start1 | m_start2;
 -- Configuration DIP switches, these can be brought out to external switches if desired
 -- See Sprint 2 manual page 11 for complete information. Active low (0 = On, 1 = Off)
 --    1 								Oil slicks			(0 - Oil slicks enabled)
---			2							Cycle tracks      (0/1 - Cycle every lap/every two laps)
+--			2							Cycle tracks      (0/1 - )
 --   			3	4					Coins per play		(00 - 1 Coin per player) 
 --						5				Extended Play		(0 - Extended Play enabled)
 --							6			Not used				(X - Don't care)
@@ -239,7 +241,7 @@ Game Time:
 
 */
 
-wire [7:0] SW1 = {status[1],status[2],1'b0,1'b0,status[3],1'b1,status[5:4]};
+wire [7:0] SW1 = {status[1],~status[2],1'b0,1'b0,status[3],1'b1,status[5:4]};
 
 wire [1:0] steer0;
 wire [1:0] steer1;
@@ -270,7 +272,7 @@ wire gear1,gear2,gear3;
 gearshift gearshift1
 (
 	.CLK(clk_12),
-	
+	.reset(m_start1|m_start2),
 	.gearup(m_gearup),
 	.geardown(m_geardown),
 	
@@ -283,6 +285,7 @@ gearshift gearshift1
 gearshift gearshift2
 (
 	.CLK(clk_12),
+	.reset(m_start1|m_start2),
 	
 	.gearup(m_gearup1),
 	.geardown(m_geardown1),
@@ -314,7 +317,7 @@ sprint2 sprint2(
 	.Coin2_I(~m_coin),
 	.Start1_I(~m_start1),
 	.Start2_I(~m_start2),
-	.Trak_Sel_I(1),
+	.Trak_Sel_I(~m_next_track),
 	.Gas1_I(~m_gas),
 	.Gas2_I(~m_gas1),
 	.Gear1_1_I(gear1),
@@ -323,7 +326,7 @@ sprint2 sprint2(
 	.Gear1_2_I(gear1_1),
 	.Gear2_2_I(gear1_2),
 	.Gear3_2_I(gear1_3),
-	.Test_I	(1),
+	.Test_I	(~status[7]),
 	.Steer_1A_I(steer0[1]),
 	.Steer_1B_I(steer0[0]),
 	.Steer_2A_I(steer1[1]),
@@ -367,7 +370,11 @@ end
 assign VGA_R=vid_mono;
 assign VGA_G=vid_mono;
 assign VGA_B=vid_mono;
-
+/*
+assign VGA_R={videowht,videoblk,videowht,videoblk,videowht,videoblk,videowht,videoblk};
+assign VGA_G={videowht,videoblk,videowht,videoblk,videowht,videoblk,videowht,videoblk};
+assign VGA_B={videowht,videoblk,videowht,videoblk,videowht,videoblk,videowht,videoblk};
+*/
 assign VGA_DE=~(vblank | hblank);
 assign AUDIO_L={audio1,1'b0,8'b00000000};
 assign AUDIO_R={audio2,1'b0,8'b00000000};
