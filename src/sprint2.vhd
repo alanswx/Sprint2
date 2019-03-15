@@ -181,11 +181,11 @@ signal rom1_cs   			: std_logic;
 signal rom2_cs   			: std_logic;
 signal rom3_cs   			: std_logic;
 signal rom4_cs   			: std_logic;
---signal rom_LSB_cs   		: std_logic;
---signal rom_MSB_cs   		: std_logic;
---signal rom_car_k6_cs   	: std_logic;
---signal rom_car_j6_cs   	: std_logic;
---signal rom_sync_prom_cs : std_logic;
+signal rom_LSB_cs   		: std_logic;
+signal rom_MSB_cs   		: std_logic;
+signal rom_car_k6_cs   	: std_logic;
+signal rom_car_j6_cs   	: std_logic;
+signal rom_sync_prom_cs : std_logic;
 signal rom_32_cs   		: std_logic;
 
 begin
@@ -215,11 +215,11 @@ rom1_cs <= '1' when dn_addr(13 downto 11) = "000"     else '0';
 rom2_cs <= '1' when dn_addr(13 downto 11) = "001"     else '0';
 rom3_cs <= '1' when dn_addr(13 downto 11) = "010"     else '0';
 rom4_cs <= '1' when dn_addr(13 downto 11) = "011"     else '0';
---rom_LSB_cs <= '1' when dn_addr(13 downto 9) =  "10000"   else '0';
---rom_MSB_cs <= '1' when dn_addr(13 downto 9) =  "10001"   else '0';
---rom_car_k6_cs <= '1' when dn_addr(13 downto 9) =  "10010"   else '0';
---rom_car_j6_cs <= '1' when dn_addr(13 downto 9) =  "10011"   else '0';
---rom_sync_prom_cs <= '1' when dn_addr(13 downto 8) =  "101000"   else '0';
+rom_LSB_cs <= '1' when dn_addr(13 downto 9) =  "10000"   else '0';
+rom_MSB_cs <= '1' when dn_addr(13 downto 9) =  "10001"   else '0';
+rom_car_k6_cs <= '1' when dn_addr(13 downto 9) =  "10010"   else '0';
+rom_car_j6_cs <= '1' when dn_addr(13 downto 9) =  "10011"   else '0';
+rom_sync_prom_cs <= '1' when dn_addr(13 downto 8) =  "101000"   else '0';
 rom_32_cs <= '1' when dn_addr(13 downto 8) =  "101001"   else '0';
 
 -- PLL to generate 12.096 MHz clock
@@ -242,13 +242,21 @@ port map(
 		vblank_n_s => vblank_n_s,
 		vblank => vblank,
 		vsync => vsync,
-		vreset => vreset
+		vreset => vreset,
+
+		dn_wr => dn_wr,
+		dn_addr=>dn_addr,
+		dn_data=>dn_data,
+		
+		rom_sync_prom_cs=>rom_sync_prom_cs
+		
 		);
 
 
 Background: entity work.playfield
 port map( 
 		clk6 => clk_6,
+		clk12 => clk_12,
 		display => display,
 		HCount => HCount,
 		VCount => VCount,
@@ -261,7 +269,16 @@ port map(
 		CompSync_n_s => CompSync_n_s,
 		CompBlank_s => CompBlank_s,
 		WhitePF_n => WhitePF_n,
-		BlackPF_n => BlackPF_n 
+		BlackPF_n => BlackPF_n,
+
+		dn_wr => dn_wr,
+		dn_addr=>dn_addr,
+		dn_data=>dn_data,
+		
+		rom_LSB_cs=>rom_LSB_cs,
+		rom_MSB_cs=>rom_MSB_cs
+		
+		
 		);
 
 		
@@ -281,7 +298,15 @@ port map(
 		Car1_n => Car1_n,
 		Car2 => Car2,
 		Car2_n => Car2_n,
-		Car3_4_n => Car3_4_n	
+		Car3_4_n => Car3_4_n,
+
+		dn_wr => dn_wr,
+		dn_addr=>dn_addr,
+		dn_data=>dn_data,
+		
+		rom_car_j6_cs=>rom_car_j6_cs,
+		rom_car_k6_cs=>rom_car_k6_cs
+		
 		);
 		
 		
