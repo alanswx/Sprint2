@@ -64,8 +64,8 @@ module emu
 );
 
 assign LED_USER  = ioctl_download;
-assign LED_DISK  = 0;
-assign LED_POWER = 0;
+assign LED_DISK  = lamp2;
+assign LED_POWER = lamp1;
 
 assign HDMI_ARX = status[1] ? 8'd16 : 8'd4;
 assign HDMI_ARY = status[1] ? 8'd9  : 8'd3;
@@ -85,7 +85,7 @@ localparam CONF_STR = {
 	"OD,Test,Off,On;",
 	"-;",
 	"R0,Reset;",
-	"J,Gas,GearUp,GearDown,Next Track,Start 1P,Start 2P;",
+	"J1,Gas,GearUp,GearDown,Next Track,Start 1P,Start 2P;",
 	"V,v",`BUILD_DATE
 };
 
@@ -138,43 +138,64 @@ always @(posedge clk_sys) begin
 	
 	if(old_state != ps2_key[10]) begin
 		casex(code)
-//			'hX75: btn_up          <= pressed; // up
-//			'hX72: btn_down        <= pressed; // down
 			'hX6B: btn_left        <= pressed; // left
 			'hX74: btn_right       <= pressed; // right
-			'h029: btn_gas         <= pressed; // space
 			'h014: btn_gas         <= pressed; // ctrl
+			'h011: btn_gearup      <= pressed; // Lalt
+			'h029: btn_geardown    <= pressed; // space
+			'h012: btn_nexttrack   <= pressed; // Lshft
 
 			'h005: btn_one_player  <= pressed; // F1
 			'h006: btn_two_players <= pressed; // F2
 			// JPAC/IPAC/MAME Style Codes
 			'h016: btn_start_1     <= pressed; // 1
+			'h01E: btn_start_2     <= pressed; // 2
 			'h02E: btn_coin_1      <= pressed; // 5
 			'h036: btn_coin_2      <= pressed; // 6
+			'h023: btn_left_2      <= pressed; // D
+			'h034: btn_right_2     <= pressed; // G
+			'h01C: btn_gas_2       <= pressed; // A
+			'h01B: btn_gearup_2    <= pressed; // S
+			'h015: btn_geardown_2  <= pressed; // Q
+			'h01D: btn_nexttrack   <= pressed; // W
 		endcase
 	end
 end
 
-//reg btn_up    = 0;
-//reg btn_down  = 0;
 reg btn_right = 0;
 reg btn_left  = 0;
 reg btn_gas  = 0;
 reg btn_one_player  = 0;
 reg btn_two_players = 0;
 
+reg btn_start_1=0;
+reg btn_start_2=0;
+reg btn_coin_1=0;
+reg btn_coin_2=0;
+reg btn_left_2=0;
+reg btn_right_2=0;
+reg btn_gearup=0;
+reg btn_geardown=0;
+reg btn_gas_2=0;
+reg btn_gearup_2=0;
+reg btn_geardown_2=0;
+reg btn_nexttrack=0;
+
+
+
+
 wire m_left			=  btn_left  | joy0[1];
 wire m_right		=  btn_right | joy0[0];
-wire m_gas			= btn_gas| joy0[4];
-wire m_gearup		=  joy0[5];
-wire m_geardown	=  joy0[6];
+wire m_gas			=  btn_gas| joy0[4];
+wire m_gearup     =  btn_gearup |joy0[5];
+wire m_geardown   =  btn_geardown | joy0[6];
 
-wire m_left1   	=	joy1[1];
-wire m_right1  	=  joy1[0];
-wire m_gas1 		=  joy1[4];
-wire m_gearup1		=  joy1[5];
-wire m_geardown1	=  joy1[6];
-wire m_next_track	=  joy0[7]|joy1[7];
+wire m_left_2   	=	joy1[1] | btn_left_2;
+wire m_right_2  	=  joy1[0]| btn_right_2;
+wire m_gas_2 		=  joy1[4]| btn_gas_2;
+wire m_gearup_2	=  joy1[5]| btn_gearup_2;
+wire m_geardown_2	=  joy1[6]| btn_geardown_2;
+wire m_next_track	=  joy0[7]|joy1[7]|btn_nexttrack;
 
 wire m_start1 = btn_one_player  | joy0[8] | joy1[8];
 wire m_start2 = btn_two_players | joy0[9] | joy1[9];
@@ -208,7 +229,7 @@ wire [1:0] steer1;
 
 joy2quad steerjoy2quad0
 (
-	.CLK(CLK_VIDEO),
+	.CLK(CLK_VIDEO_2),
 	.clkdiv('d22500),
 	
 	.right(m_right),
@@ -218,11 +239,11 @@ joy2quad steerjoy2quad0
 );
 joy2quad steerjoy2quad1
 (
-	.CLK(CLK_VIDEO),
+	.CLK(CLK_VIDEO_2),
 	.clkdiv('d22500),
 	
-	.right(m_right1),
-	.left(m_left1),
+	.right(m_right_2),
+	.left(m_left_2),
 	
 	.steer(steer1)
 );
@@ -241,14 +262,14 @@ gearshift gearshift1
 	.gear3(gear3)
 
 );
-
+wire gear1_1,gear1_2,gear1_3;
 gearshift gearshift2
 (
 	.CLK(clk_12),
 	.reset(m_start1|m_start2),
 	
-	.gearup(m_gearup1),
-	.geardown(m_geardown1),
+	.gearup(m_gearup_2),
+	.geardown(m_geardown_2),
 	
 	.gear1(gear1_1),
 	.gear2(gear1_2),
@@ -257,7 +278,7 @@ gearshift gearshift2
 );
 
 
-wire videowht,videoblk,compositesync,lamp;
+wire videowht,videoblk,compositesync,lamp1,lamp2;
 
 sprint2 sprint2(
 	.Clk_50_I(CLK_50M),
@@ -279,7 +300,7 @@ sprint2 sprint2(
 	.Start2_I(~(m_start2|btn_start_2)),
 	.Trak_Sel_I(~m_next_track),
 	.Gas1_I(~m_gas),
-	.Gas2_I(~m_gas1),
+	.Gas2_I(~m_gas_2),
 	.Gear1_1_I(gear1),
 	.Gear2_1_I(gear2),
 	.Gear3_1_I(gear3),
@@ -310,12 +331,10 @@ wire [3:0] videor;
 wire clk_24,clk_12,CLK_VIDEO_2;
 wire clk_sys,locked;
 reg [7:0] vid_mono;
-wire[1:0] sprint_vid;
 
-//assign sprint_vid = {videowht,videoblk};
 always @(posedge clk_sys) begin
 		casex({videowht,videoblk})
-			2'b01: vid_mono<=8'b01010000;
+			2'b01: vid_mono<=8'b01110000;
 			2'b10: vid_mono<=8'b10000110;
 			2'b11: vid_mono<=8'b11111111;
 			2'b00: vid_mono<=8'b00000000;
@@ -324,7 +343,7 @@ end
 
 assign r=vid_mono[7:5];
 assign g=vid_mono[7:5];
-assign b=vid_mono[7:6];
+assign b=vid_mono[7:5];
 assign AUDIO_L={audio1,1'b0,8'b00000000};
 assign AUDIO_R={audio2,1'b0,8'b00000000};
 assign AUDIO_S = 0;
@@ -332,7 +351,7 @@ assign AUDIO_S = 0;
 wire hblank, vblank;
 wire hs, vs;
 wire [2:0] r,g;
-wire [1:0] b;
+wire [2:0] b;
 
 reg ce_pix;
 always @(posedge clk_24) begin
@@ -342,7 +361,7 @@ always @(posedge clk_24) begin
         ce_pix <= old_clk & ~CLK_VIDEO_2;
 end
 
-arcade_fx #(298,8) arcade_video
+arcade_fx #(320,9) arcade_video
 (
         .*,
 
